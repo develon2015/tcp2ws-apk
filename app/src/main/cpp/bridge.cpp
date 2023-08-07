@@ -11,29 +11,34 @@ Java_app_tcp2ws_Bridge_test(
 }
 
 extern "C"
-JNIEXPORT jstring JNICALL
-Java_app_tcp2ws_Bridge_start(JNIEnv *env, jobject thiz, jstring i_server, jshort i_port,
-                                   jstring i_password, jstring i_local_service) {
-    auto port = (uint16_t) i_port;
-    const char *server = env->GetStringUTFChars(i_server, 0);
-    const char *password = env->GetStringUTFChars(i_password, 0);
-    const char *local_service = env->GetStringUTFChars(i_local_service, 0);
+JNIEXPORT jboolean JNICALL
+Java_app_tcp2ws_Bridge_start(JNIEnv *env, jobject thiz, jstring i_name,
+                             jstring i_ws, jstring i_listen) {
+    const char *name = env->GetStringUTFChars(i_name, 0);
+    const char *ws = env->GetStringUTFChars(i_ws, 0);
+    const char *listen = env->GetStringUTFChars(i_listen, 0);
     // 在此处使用本地字符串
-//    const char *handler = start(server, port, password, local_service);
-    const char *handler = "";
+    const bool ok = start(name, ws, listen);
     // 释放字符串内存
-    env->ReleaseStringUTFChars(i_server, server);
-    env->ReleaseStringUTFChars(i_password, password);
-    env->ReleaseStringUTFChars(i_local_service, local_service);
+    env->ReleaseStringUTFChars(i_name, name);
+    env->ReleaseStringUTFChars(i_ws, ws);
+    env->ReleaseStringUTFChars(i_listen, listen);
     // 返回任务句柄
-    return env->NewStringUTF(handler);
+    return ok;
 }
 
 extern "C"
-JNIEXPORT void JNICALL
-Java_app_tcp2ws_Bridge_stop(JNIEnv *env, jobject thiz, jstring i_handler) {
-    const char *handler = env->GetStringUTFChars(i_handler, 0);
-//    stop(handler);
+JNIEXPORT jboolean JNICALL
+Java_app_tcp2ws_Bridge_stop(JNIEnv *env, jobject thiz, jstring i_name,
+                             jstring i_ws, jstring i_listen) {
+    const char *name = env->GetStringUTFChars(i_name, 0);
+    const char *ws = env->GetStringUTFChars(i_ws, 0);
+    const char *listen = env->GetStringUTFChars(i_listen, 0);
+    // 在此处使用本地字符串
+    const bool ok = stop(name, ws, listen);
     // 释放字符串内存
-    env->ReleaseStringUTFChars(i_handler, handler);
+    env->ReleaseStringUTFChars(i_name, name);
+    env->ReleaseStringUTFChars(i_ws, ws);
+    env->ReleaseStringUTFChars(i_listen, listen);
+    return ok;
 }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -32,10 +33,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.tcp2ws.Config
 import app.tcp2ws.Instance
-import app.tcp2ws.Server
 import app.tcp2ws.isRunning
 import app.tcp2ws.playOrStop
 import app.tcp2ws.rm
@@ -63,7 +64,6 @@ fun MenuDialog(
             Button(onClick = {
                 if (isRunning(config.name)) return@Button showToast("运行中，不允许删除！")
                 val ok = when (config) {
-                    is Server -> rm<Server>(config.name)
                     is Instance -> rm<Instance>(config.name)
                 }
                 if (ok)
@@ -122,31 +122,25 @@ fun InstanceItem(
                 ) {
                     Column {
                         Text(
-                            text = "Address:",
+                            text = "Websocket:",
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         )
                         Text(
-                            text = value.local_address,
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
-                        )
-                    }
-                    Column {
-                        Text(
-                            text = "Server:",
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
-                        )
-                        Text(
-                            text = value.server_name,
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                            text = value.ws,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.align(Alignment.CenterHorizontally).widthIn(max = 200.dp)
                         )
                     }
                     Column {
                         Text(
-                            text = "Port:",
+                            text = "Listen:",
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         )
                         Text(
-                            text = value.remote_port.toString(),
+                            text = value.listen,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         )
                     }
@@ -159,59 +153,6 @@ fun InstanceItem(
                         Icon(if (!running.value) Icons.Filled.PlayArrow else Icons.Filled.Close, null, tint = MaterialTheme.colorScheme.outline,
                             modifier = Modifier.fillMaxSize())
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ServerItem(
-    value: Server
-) {
-    val showMenu= remember { mutableStateOf(false) }
-    val showDialog = remember { mutableStateOf(false) }
-    if (showMenu.value) {
-        MenuDialog(showMenu, showDialog, value)
-    }
-    if (showDialog.value) {
-        ConfigDialog(
-            showDialog,
-            server = value,
-            isModify = true,
-        )
-    }
-    Spacer(modifier = Modifier.size(10.dp))
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(100.dp)
-            .pointerInput(Unit) {
-                detectTapGestures(onLongPress = {
-                    showMenu.value = true
-                })
-            },
-    ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            Arrangement.Center,
-        ) {
-            Text(text = value.name)
-        }
-        Divider()
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-            Column {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    Arrangement.SpaceEvenly,
-                ) {
-                    Text(text = "Address:")
-                }
-                Row(
-                    Modifier.fillMaxWidth(),
-                    Arrangement.SpaceEvenly,
-                ) {
-                    Text(text = value.address, modifier = Modifier)
                 }
             }
         }

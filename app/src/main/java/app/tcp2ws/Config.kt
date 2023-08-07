@@ -35,28 +35,17 @@ sealed interface Config {
 
 data class Instance(
     override var name: String,
-    var server_name: String,
-    var remote_port: UShort,
-    var local_address: String,
+    var ws: String,
+    var listen: String,
 ) : Config {
     companion object {
-        fun default() = Instance("service", "", 0u, "127.0.0.1:5555")
-    }
-}
-
-data class Server(
-    override var name: String,
-    var address: String,
-    var password: String,
-) : Config {
-    companion object {
-        fun default() = Server("server", "1.1.1.1:1234", "test")
+        fun default() = Instance("service", "ws://wsp.my-api.workers.dev/?ws://", "127.0.0.1:8888")
     }
 }
 
 lateinit var sharedPreferences: SharedPreferences
 
-fun getConfigs(): Pair<List<Instance>, List<Server>> {
+fun getConfigs(): Pair<List<Instance>, Unit> {
     if (sharedPreferences.getString("version", null).apply { log.i("config version: $this") } == null) {
         log.i("config.xml load failed")
         sharedPreferences.edit(commit = true) {
@@ -75,36 +64,15 @@ fun getConfigs(): Pair<List<Instance>, List<Server>> {
             instance.forEach {
                 val split = it.split(":", limit = 2)
                 when (split[0]) {
-                    "server_name" -> inst.server_name = split[1]
-                    "remote_port" -> inst.remote_port = split[1].toUShort()
-                    "local_address" -> inst.local_address = split[1]
+                    "ws" -> inst.ws = split[1]
+                    "listen" -> inst.listen = split[1]
                 }
             }
             log.i(inst)
             inst
         } ?: listOf<Instance>()
     }.filterNotNull().sortedBy { it.name }
-    val servers: List<Server> = sharedPreferences.getStringSet("servers", setOf()).let { it ->
-        log.i(it?.size)
-        it?.map { name ->
-            log.i("name -> $name")
-            val server = sharedPreferences.getStringSet(name, setOf())
-                ?.toList()
-                ?: return@map null
-            val serv = Server.default()
-            serv.name = name
-            server.forEach {
-                val split = it.split(":", limit = 2)
-                when (split[0]) {
-                    "address" -> serv.address = split[1]
-                    "password" -> serv.password = split[1]
-                }
-            }
-            log.i(serv)
-            serv
-        } ?: listOf<Server>()
-    }.filterNotNull().sortedBy { it.name }
-    return Pair(instances, servers)
+    return Pair(instances, Unit)
 }
 
 /**
@@ -117,23 +85,12 @@ fun addConfig(value: Config, showDialog: MutableState<Boolean>, isModifySameName
         return false
     }
     when (value) {
-        is Server -> {
-            val servers = sharedPreferences.getStringSet("servers", setOf())!!.toMutableSet()
-            sharedPreferences.edit(commit = true) {
-                putStringSet(value.name, setOf(
-                    "address:${value.address}",
-                    "password:${value.password}",
-                ))
-                putStringSet("servers", servers.apply { this.add(value.name) })
-            }
-        }
         is Instance -> {
             val instances = sharedPreferences.getStringSet("instances", setOf())!!.toMutableSet()
             sharedPreferences.edit(commit = true) {
                 putStringSet(value.name, setOf(
-                    "server_name:${value.server_name}",
-                    "remote_port:${value.remote_port}",
-                    "local_address:${value.local_address}",
+                    "ws:${value.ws}",
+                    "listen:${value.listen}",
                 ))
                 putStringSet("instances", instances.apply { this.add(value.name) })
             }
@@ -146,7 +103,6 @@ fun addConfig(value: Config, showDialog: MutableState<Boolean>, isModifySameName
 
 inline fun <reified T: Config> rm(name: String): Boolean {
     val type = when (T::class) {
-        Server::class -> "servers"
         Instance::class -> "instances"
         else -> return false
     }
@@ -160,36 +116,29 @@ inline fun <reified T: Config> rm(name: String): Boolean {
     return true
 }
 
-fun findServerByName(name: String): Server? {
-    val (_, servers) = configs.value
-    return servers.find { it.name == name }
-}
-
 // 运行中的配置名及其id
 // 请考虑配置名被修改的情况（运行中不允许修改、删除即可）
-val runningList = hashMapOf<String, String>()
+val runningList = hashMapOf<String, Instance>()
 fun playOrStop(instance: Instance, running: MutableState<Boolean>) {
     if (running.value) {
-        runningList[instance.name]?.let { id ->
-//            bridge.stop(id)
+        runningList[instance.name]?.let { instance ->
+            bridge.stop(instance.name, instance.ws, instance.listen)
             runningList.remove(instance.name)
-            showToast("停止成功：$id")
+            showToast("停止成功：${instance.name}")
         }
         running.value = false
         instRmBindService?.update()
         return
     }
-    val server = findServerByName(instance.server_name).let {
-        if (it == null) {
-            return showToast("配置无效，请重新设置服务器！")
-        }
-        it
+    val ok = bridge.start(instance.name, instance.ws, instance.listen)
+    if (ok) {
+        showToast("启动成功：${instance.name}")
+        runningList[instance.name] = instance
+        running.value = true
+        instRmBindService?.update()
+    } else {
+        showToast("启动失败：${instance.name}")
     }
-//    val id = bridge.start(server.address, instance.remote_port.toShort(), server.password, instance.local_address)
-//    showToast("启动成功：$id")
-//    runningList[instance.name] = id
-    running.value = true
-    instRmBindService?.update()
 }
 
 fun isRunning(name: String): Boolean {

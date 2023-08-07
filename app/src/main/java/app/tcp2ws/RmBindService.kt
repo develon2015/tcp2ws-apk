@@ -26,7 +26,7 @@ class RmBindService : Service() {
     private val notification by lazy {
         NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("端口穿透")
+            .setContentTitle(getString(R.string.app_name))
             .setContentText("服务正在运行...")
             .setContentIntent(intent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

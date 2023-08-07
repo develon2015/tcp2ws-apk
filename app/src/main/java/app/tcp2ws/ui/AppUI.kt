@@ -48,13 +48,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.tcp2ws.Instance
-import app.tcp2ws.Server
 import app.tcp2ws.application
-import app.tcp2ws.bridge
 import app.tcp2ws.getConfigs
 import kotlinx.coroutines.launch
 
-private val titles = listOf("配置列表", "服务器列表")
+private val titles = listOf("配置列表")
 
 val configs by lazy {
     mutableStateOf( getConfigs() )
@@ -62,9 +60,7 @@ val configs by lazy {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun AppUI(
-//    configs: Pair<List<Instance>, List<Server>>,
-) {
+fun AppUI() {
     val pagerState = rememberPagerState()
     val showDialog = remember { mutableStateOf(false) }
     ShowToast()
@@ -90,8 +86,7 @@ fun AppUI(
     if (showDialog.value) {
         ConfigDialog(
             showDialog,
-            instance = if (titles[pagerState.currentPage] == "配置列表") { Instance.default() } else { null },
-            server = if (titles[pagerState.currentPage] == "服务器列表") { Server.default() } else { null },
+            instance = Instance.default(),
         )
     }
 }
@@ -146,8 +141,6 @@ fun AppTopBar(title: String) {
                         }
                     },
                     onClick = {
-                        bridge.test()
-                        return@DropdownMenuItem
                         expand = false
                         application.toggleForegroundService(true)
                         Process.killProcess(Process.myPid())
@@ -205,7 +198,7 @@ fun AppBottomBar(pagerState: PagerState) {
 fun AppContent(
     pagerState: PagerState,
     innerPadding: PaddingValues,
-    configs:  Pair<List<Instance>, List<Server>>,
+    configs:  Pair<List<Instance>, Unit>,
 ) {
     val (insts, servs) = configs
     HorizontalPager(
@@ -220,10 +213,6 @@ fun AppContent(
                 if (titles[pageIndex] == "配置列表") {
                     items(count = insts.size) {
                         InstanceItem(value = insts[it])
-                    }
-                } else {
-                    items(count = servs.size) {
-                        ServerItem(value = servs[it])
                     }
                 }
             }
